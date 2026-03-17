@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meds Planner</title>
+	<link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23b2f2bb%22/><g transform=%22rotate(-45 50 50)%22><path d=%22M50 38 H30 A12 12 0 0 0 30 62 H50 Z%22 fill=%22white%22/><path d=%22M50 38 H70 A12 12 0 0 1 70 62 H50 Z%22 fill=%22%23e74c3c%22/></g></svg>">
+    <style>
+        :root { --primary: #2c3e50; --accent: #27ae60; --danger: #e74c3c; --bg: #f4f7f6; --kofi: #29abe0; --print-blue: #3498db; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 20px; background: var(--bg); color: #333; }
+        #setup-area { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 1150px; margin: 0 auto 10px; }
+        
+        .setup-top-bar { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 25px; }
+        .setup-title { margin: 0; font-size: 1.8em; font-weight: bold; }
+        
+        .lang-switcher { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+        .flag-btn { cursor: pointer; background: white; border: 2px solid #ccc; border-radius: 6px; padding: 3px; display: flex; align-items: center; transition: 0.2s; }
+        .flag-btn svg { width: 24px; height: 16px; border-radius: 2px; }
+        .flag-btn.active { border-color: var(--accent); background: #eafff2; }
+
+        .setup-header { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-weight: bold; }
+        .med-row { display: flex; gap: 10px; align-items: center; padding: 10px; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .m-name { flex-grow: 2; font-size: 18px; font-weight: bold; border-left: 4px solid var(--primary); min-width: 200px; }
+        
+        .button-group { display: flex; gap: 10px; margin-top: 25px; flex-wrap: wrap; }
+        button { cursor: pointer; padding: 10px 20px; border-radius: 6px; border: none; font-weight: bold; }
+        .add-btn { background: var(--accent); color: white; margin-top: 15px; }
+        .gen-btn { background: var(--primary); color: white; flex-grow: 3; font-size: 1.1em; height: 50px; min-width: 150px; }
+        .print-btn { background: var(--print-blue); color: white; flex-grow: 2; font-size: 1.1em; height: 50px; display: none; min-width: 150px; }
+        .reset-btn { background: var(--danger); color: white; flex-grow: 1; height: 50px; min-width: 100px; }
+
+        .footer-nav { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 0.82em; color: #777; flex-wrap: wrap; gap: 15px; }
+        .footer-support { display: flex; align-items: center; gap: 12px; }
+        
+        .kofi-button { display: inline-flex; align-items: center; gap: 8px; background: #29abe0; color: white; text-decoration: none; padding: 8px 16px; border-radius: 10px; font-weight: bold; transition: 0.2s; box-shadow: 0 4px 0 #1e7ba2; }
+        
+        .legal-box { font-size: 0.85em; line-height: 1.5; background: #f9f9f9; padding: 12px; border-radius: 6px; margin-top: 10px; border: 1px solid #ddd; color: #444; }
+        .mit-text { font-family: monospace; font-size: 0.8em; margin-top: 10px; display: block; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
+        details { margin-top: 15px; font-size: 0.9em; }
+        summary { cursor: pointer; font-weight: bold; color: var(--primary); margin-bottom: 5px; }
+
+        #print-area { display: none; background: white; padding: 20px; overflow-x: auto; }
+        table { width: auto; border-collapse: collapse; margin: 0 auto; border: 3px solid #000; min-width: 600px; }
+        th, td { border: 1.5px solid #000; padding: 4px; text-align: center; }
+        
+        .day-sep { border-left: 3px solid #000 !important; }
+        tr { border-bottom: 2.5px solid #000; }
+
+        .day-title { font-size: 1em; background: #eee; font-weight: bold; }
+        .med-label { text-align: left; font-size: 1.3em; font-weight: 900; padding: 8px 15px; }
+        .med-dose-display { font-size: 0.6em; font-weight: normal; color: #444; display: block; }
+        .box { width: 22px; height: 22px; border: 1.5px solid #000; margin: auto; }
+        .empty-slot { background-color: #f2f2f2; }
+
+        @media (max-width: 600px) {
+            body { margin: 10px; }
+            #setup-area { padding: 15px; }
+            .setup-top-bar { flex-direction: column; align-items: flex-start; }
+            .m-name, .m-dose { width: 100% !important; }
+            .setup-header input { width: 100%; margin-bottom: 10px; }
+            .button-group { flex-direction: column; }
+            .button-group button { width: 100%; }
+        }
+
+        @media print { @page { size: landscape; margin: 0.5cm; } .no-print { display: none !important; } #print-area { display: block !important; overflow: visible !important; } body { background: white; margin: 0; } }
+    </style>
+</head>
+<body>
+
+<div id="setup-area" class="no-print">
+    <div class="setup-top-bar">
+        <h2 class="setup-title" data-key="setupTitle">Setup</h2>
+        <div class="lang-switcher">
+            <button class="flag-btn" id="btn-sk" onclick="setLang('sk')"><svg viewBox="0 0 900 600"><rect width="900" height="200" fill="#fff"/><rect y="200" width="900" height="200" fill="#0b4ea2"/><rect y="400" width="900" height="200" fill="#ee1c25"/><g transform="translate(260,300) scale(1.1)"><path d="M-150,-150 L150,-150 L150,50 C150,150 0,180 0,180 C0,180 -150,150 -150,50 Z" fill="#ee1c25" stroke="#fff" stroke-width="15"/><rect x="-10" y="-120" width="20" height="240" fill="#fff"/><rect x="-80" y="-30" width="160" height="20" fill="#fff"/><path d="M0,130 C40,130 80,100 80,100 L-80,100 C-80,100 -40,130 0,130 Z" fill="#0b4ea2" stroke="#fff" stroke-width="5"/></g></svg></button>
+            <button class="flag-btn" id="btn-en" onclick="setLang('en')"><svg viewBox="0 0 60 30"><rect width="60" height="30" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg></button>
+            <button class="flag-btn" id="btn-pt" onclick="setLang('pt')"><svg viewBox="0 0 600 400"><rect width="600" height="400" fill="#ff0000"/><rect width="240" height="400" fill="#006600"/><circle cx="240" cy="200" r="80" fill="#FFFF00"/><path d="M240,120 a80,80 0 0,1 0,160 z" fill="#AD1519"/><rect x="230" y="140" width="20" height="120" fill="#FFFF00"/><rect x="180" y="190" width="120" height="20" fill="#FFFF00"/></svg></button>
+            <button class="flag-btn" id="btn-de" onclick="setLang('de')"><svg viewBox="0 0 5 3"><rect width="5" height="1" y="0" fill="#000"/><rect width="5" height="1" y="1" fill="#D00"/><rect width="5" height="1" y="2" fill="#FFCE00"/></svg></button>
+            <button class="flag-btn" id="btn-it" onclick="setLang('it')"><svg viewBox="0 0 3 2"><rect width="1" height="2" x="0" fill="#008C45"/><rect width="1" height="2" x="1" fill="#F4F5F0"/><rect width="1" height="2" x="2" fill="#CD212A"/></svg></button>
+            <button class="flag-btn" id="btn-fr" onclick="setLang('fr')"><svg viewBox="0 0 3 2"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#fff"/><rect width="1" height="2" x="2" fill="#ED2939"/></svg></button>
+            <button class="flag-btn" id="btn-es" onclick="setLang('es')"><svg viewBox="0 0 3 2"><rect width="3" height="0.5" y="0" fill="#AD1519"/><rect width="3" height="1" y="0.5" fill="#FABD00"/><rect width="3" height="0.5" y="1.5" fill="#AD1519"/></svg></button>
+        </div>
+    </div>
+    
+    <div class="setup-header">
+        <input type="text" id="patientName" data-key="patient" placeholder="Patient" style="flex-grow: 1;">
+        <span data-key="fromLabel">from</span> <input type="date" id="startDate">
+        <span data-key="forLabel">for</span> <input type="number" id="days" value="7" style="width: 65px;"> <span data-key="daysLabel">days</span>
+    </div>
+
+    <div id="med-list"></div>
+    <button class="add-btn" onclick="addMedRow()" data-key="addBtn">+ Add</button>
+    
+    <div class="button-group">
+        <button class="gen-btn" onclick="generateTable()" data-key="genBtn">Generate Table</button>
+        <button class="print-btn" id="printBtn" onclick="window.print()" data-key="printBtn">Print</button>
+        <button class="reset-btn" onclick="resetAll()" data-key="resetBtn">Reset</button>
+    </div>
+
+    <details>
+        <summary id="help-summary"></summary>
+        <ul id="help-content"></ul>
+        <details style="margin-left: 20px;">
+            <summary data-key="eulaTitle">Terms & License</summary>
+            <div class="legal-box"><p id="eula-text"></p><code class="mit-text" id="mit-text"></code></div>
+        </details>
+    </details>
+
+    <div class="footer-nav">
+        <div>v1.0.6 | MIT License</div>
+<div class="footer-support">
+    <span class="kofi-prompt" id="kofi-prompt"></span>
+    <a href="https://ko-fi.com/creathinq?amount=3" target="_blank" class="kofi-button">
+        <svg style="width:18px; fill:white;" viewBox="0 0 24 24"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.724c-.304 0-.55.246-.55.55v13.474c0 .304.246.55.55.55h13.333c.304 0 .55-.246.55-.55V14.15h.852s4.953.111 5.922-3.834c.159-.648.272-1.312.422-1.932.113-.466.196-.926.178-1.368zM18.84 12.3c-.63 2.507-3.21 2.378-3.21 2.378H14.15V7.12h1.48s2.655-.164 3.21 2.378c.134.614.116 1.229 0 1.834v.968z"/></svg>
+        <span data-key="supportBtn">Buy me a coffee</span>
+    </a>
+</div>
+    </div>
+</div>
+
+<div id="print-area">
+    <h1 id="table-title" style="text-align: center; margin-top: 0;"></h1>
+    <table id="logTable"><thead id="table-head"></thead><tbody id="table-body"></tbody></table>
+</div>
+
+<script>
+    const i18n = {
+        sk: { 
+            setupTitle: "Rozpis liekov", patient: "Meno pacienta - voliteľné", fromLabel: "od", forLabel: "na", daysLabel: "dní", addBtn: "+ Pridať liek", genBtn: "Generovať", resetBtn: "Vymazať", printBtn: "Tlačiť",
+            medName: "Liek - voliteľné", dose: "Dávka - voliteľné", m: "Ráno", l: "Obed", e: "Večer", m_s: "R", l_s: "O", e_s: "V", title: "Plánovač liekov", legend: "R=Ráno, O=Obed, V=Večer",
+            helpTitle: "💡 Pomocník", helpItems: ["<b>Pridanie:</b> Zadajte názov/dávku.", "<b>Tlač:</b> Nastavte <b>Na šírku</b>."],
+            eulaTitle: "Podmienky", mitLicense: "MIT Licencia", supportPrompt: "Užitočné?", supportBtn: "Kúpiť kávu",
+            eula: "Tento nástroj je bezplatný. Neslúži ako lekárske odporúčanie. Používaním preberáte plnú zodpovednosť za správnosť údajov. Autor nezodpovedá za žiadne škody.",
+        },
+        en: { 
+            setupTitle: "Meds Planner", patient: "Patient Name - optional", fromLabel: "from", forLabel: "for", daysLabel: "days", addBtn: "+ Add Medication", genBtn: "Generate", resetBtn: "Reset", printBtn: "Print Table",
+            medName: "Medication - optional", dose: "Dose - optional", m: "Morning", l: "Lunch", e: "Evening", m_s: "M", l_s: "L", e_s: "E", title: "Meds planner", legend: "M=Morning, L=Lunch, E=Evening",
+            helpTitle: "💡 Quick Help", helpItems: ["<b>Adding:</b> Enter name/dose.", "<b>Printing:</b> Set <b>Landscape</b>."],
+            eulaTitle: "Terms", mitLicense: "MIT License", supportPrompt: "Useful?", supportBtn: "Buy me a coffee",
+            eula: "This tool is free to use. It does not constitute medical advice. Use at your own risk. The author is not liable for any damages.",
+        },
+        pt: { setupTitle: "Meds Planner", patient: "Nome do Paciente", fromLabel: "de", forLabel: "por", daysLabel: "dias", addBtn: "+ Adicionar", genBtn: "Gerar", resetBtn: "Apagar", printBtn: "Imprimir", medName: "Medicação", dose: "Dose", m: "Manhã", l: "Almoço", e: "Noite", m_s: "M", l_s: "A", e_s: "N", title: "Meds Planner", legend: "M=Manhã, A=Almoço, N=Noite", helpTitle: "💡 Ajuda", helpItems: ["<b>Adicionar:</b> Nome/dose.", "<b>Impressão:</b> Use <b>Paisagem</b>."], eulaTitle: "Termos", mitLicense: "Licença MIT", supportPrompt: "Útil?", supportBtn: "Café", eula: "Esta ferramenta é gratuita. Não constitui aconselhamento médico. Use por sua conta e risco. O autor não é responsável por danos.", },
+        de: { setupTitle: "Meds Planner", patient: "Name des Patienten", fromLabel: "ab", forLabel: "für", daysLabel: "Tage", addBtn: "+ Medikament", genBtn: "Generieren", resetBtn: "Löschen", printBtn: "Drucken", medName: "Medikament", dose: "Dosis", m: "Morgens", l: "Mittags", e: "Abends", m_s: "M", l_s: "M", e_s: "A", title: "Meds Planner", legend: "M=Morgens, M=Mittags, A=Abends", helpTitle: "💡 Hilfe", helpItems: ["<b>Hinzufügen:</b> Name/Dosis.", "<b>Drucken:</b> Querformat."], eulaTitle: "AGB", mitLicense: "MIT Lizenz", supportPrompt: "Nützlich?", supportBtn: "Kaffee", eula: "Kostenlose Nutzung. Keine medizinische Beratung. Nutzung auf eigene Gefahr. Der Autor haftet nicht für Schäden.", },
+        it: { setupTitle: "Meds Planner", patient: "Nome del paziente", fromLabel: "dal", forLabel: "per", daysLabel: "giorni", addBtn: "+ Farmaco", genBtn: "Genera", resetBtn: "Reset", printBtn: "Stampa", medName: "Farmaco", dose: "Dosaggio", m: "Mattina", l: "Pomeriggio", e: "Sera", m_s: "M", l_s: "P", e_s: "S", title: "Meds Planner", legend: "M=Mattina, P=Pomeriggio, S=Sera", helpTitle: "💡 Aiuto", helpItems: ["<b>Aggiungi:</b> Nome/dose.", "<b>Stampa:</b> Orizzontale."], eulaTitle: "Note", mitLicense: "Licenza MIT", supportPrompt: "Ti piace?", supportBtn: "Caffè", eula: "Uso gratuito. Non è un consiglio medico. Uso a proprio rischio. L'autore non è responsabile per eventuali danni.", },
+        fr: { setupTitle: "Meds Planner", patient: "Nom du patient", fromLabel: "du", forLabel: "pour", daysLabel: "jours", addBtn: "+ Médicament", genBtn: "Générer", resetBtn: "Reset", printBtn: "Imprimer", medName: "Médicament", dose: "Dose", m: "Matin", l: "Midi", e: "Soir", m_s: "M", l_s: "M", e_s: "S", title: "Meds Planner", legend: "M=Matin, M=Midi, S=Soir", helpTitle: "💡 Aide", helpItems: ["<b>Ajouter:</b> Nom/dose.", "<b>Impression:</b> Paysage."], eulaTitle: "Mentions", mitLicense: "Licence MIT", supportPrompt: "Utile ?", supportBtn: "Café", eula: "Outil gratuit. Pas de conseil médical. À utiliser à vos risques et périls. L'auteur décline toute responsabilité.", },
+        es: { setupTitle: "Meds Planner", patient: "Nombre del paciente", fromLabel: "desde", forLabel: "por", daysLabel: "días", addBtn: "+ Medicamento", genBtn: "Generar", resetBtn: "Borrar", printBtn: "Imprimir", medName: "Medicamento", dose: "Dosis", m: "Mañana", l: "Almuerzo", e: "Noche", m_s: "M", l_s: "A", e_s: "N", title: "Meds Planner", legend: "M=Mañana, A=Almuerzo, N=Noche", helpTitle: "💡 Ayuda", helpItems: ["<b>Añadir:</b> Nombre/dosis.", "<b>Impresión:</b> Horizontal."], eulaTitle: "Legal", mitLicense: "Licencia MIT", supportPrompt: "¿Útil?", supportBtn: "Café", eula: "Herramienta gratuita. No es consejo médico. Uso bajo su propio riesgo. El autor no se hace responsable de los daños.", }
+    };
+
+    let currentLang = 'sk';
+    function setLang(lang) {
+        currentLang = lang;
+        document.querySelectorAll('.flag-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btn-${lang}`).classList.add('active');
+        const content = i18n[lang];
+        document.querySelectorAll('[data-key]').forEach(el => {
+            const key = el.getAttribute('data-key');
+            if (el.tagName === 'INPUT') el.placeholder = content[key];
+            else el.innerText = content[key] || content.mitLicense;
+        });
+        document.getElementById('help-summary').innerText = content.helpTitle;
+        document.getElementById('help-content').innerHTML = (content.helpItems || []).map(i => `<li>${i}</li>`).join('');
+        document.getElementById('eula-text').innerText = content.eula;
+        document.getElementById('mit-text').innerText = content.mitLicense;
+        document.getElementById('kofi-prompt').innerText = content.supportPrompt;
+        
+        const list = document.getElementById('med-list');
+        const rows = Array.from(list.querySelectorAll('.med-row')).map(row => ({
+            name: row.querySelector('.m-name').value,
+            dose: row.querySelector('.m-dose').value,
+            m: row.querySelector('.m-morn').checked,
+            l: row.querySelector('.m-lunch').checked,
+            e: row.querySelector('.m-even').checked
+        }));
+        list.innerHTML = '';
+        rows.forEach(r => addMedRow(r));
+    }
+
+    function addMedRow(saved = null) {
+        const div = document.createElement('div');
+        div.className = 'med-row';
+        div.innerHTML = `
+            <input type="text" placeholder="${i18n[currentLang].medName}" class="m-name" value="${saved?.name || ''}"> 
+            <input type="text" placeholder="${i18n[currentLang].dose}" class="m-dose" style="width:120px;" value="${saved?.dose || ''}"> 
+            <label><input type="checkbox" class="m-morn" ${saved?.m ? 'checked' : ''}> ${i18n[currentLang].m}</label> 
+            <label><input type="checkbox" class="m-lunch" ${saved?.l ? 'checked' : ''}> ${i18n[currentLang].l}</label> 
+            <label><input type="checkbox" class="m-even" ${saved?.e ? 'checked' : ''}> ${i18n[currentLang].e}</label> 
+            <button onclick="this.parentElement.remove()" style="background:#ff7675;color:white;padding:5px 10px;border-radius:4px;cursor:pointer;margin-left:auto;">X</button>`;
+        document.getElementById('med-list').appendChild(div);
+    }
+
+    function generateTable() {
+        const name = document.getElementById('patientName').value;
+        const startStr = document.getElementById('startDate').value;
+        const duration = parseInt(document.getElementById('days').value);
+        const meds = Array.from(document.querySelectorAll('.med-row')).map(row => ({ name: row.querySelector('.m-name').value, dose: row.querySelector('.m-dose').value, m: row.querySelector('.m-morn').checked, l: row.querySelector('.m-lunch').checked, e: row.querySelector('.m-even').checked })).filter(m => m.m || m.l || m.e);
+        if (!startStr || meds.length === 0) return;
+        document.getElementById('print-area').style.display = 'block';
+        document.getElementById('printBtn').style.display = 'inline-block';
+        localStorage.setItem('medData', JSON.stringify({ name, lang: currentLang, meds }));
+        const startDate = new Date(startStr);
+        const lang = i18n[currentLang];
+        document.getElementById('table-title').innerText = `${lang.title} ${name ? '– ' + name : ''}`;
+        
+        let head = `<tr style="font-size:0.7em;"><th colspan="${1+duration*3}" style="text-align:right; border-bottom:none;">${lang.legend}</th></tr><tr><th rowspan="2" class="med-label"></th>`;
+        let slots = `<tr>`;
+        for (let i = 0; i < duration; i++) {
+            let d = new Date(startDate); d.setDate(startDate.getDate() + i);
+            head += `<th colspan="3" class="day-title day-sep">${d.toLocaleDateString(currentLang, { weekday: 'short', day: 'numeric' })}</th>`;
+            slots += `<th class="day-sep">${lang.m_s}</th><th>${lang.l_s}</th><th>${lang.e_s}</th>`;
+        }
+        document.getElementById('table-head').innerHTML = head + `</tr>` + slots + `</tr>`;
+        
+        let body = '';
+        meds.forEach(m => {
+            body += `<tr><td class="med-label">${m.name}<span class="med-dose-display">${m.dose}</span></td>`;
+            for (let i = 0; i < duration; i++) { 
+                const times = [m.m, m.l, m.e];
+                times.forEach((active, idx) => { 
+                    const dayClass = (idx === 0) ? 'day-sep' : '';
+                    body += `<td class="${active ? '' : 'empty-slot'} ${dayClass}">${active ? '<div class="box"></div>' : ''}</td>`; 
+                }); 
+            }
+            body += `</tr>`;
+        });
+        document.getElementById('table-body').innerHTML = body;
+    }
+
+    function resetAll() { if(confirm(i18n[currentLang].resetBtn + "?")) { localStorage.removeItem('medData'); location.reload(); } }
+    window.onload = () => {
+        document.getElementById('startDate').valueAsDate = new Date();
+        const saved = JSON.parse(localStorage.getItem('medData'));
+        if (saved) {
+            currentLang = saved.lang || 'sk'; setLang(currentLang);
+            document.getElementById('patientName').value = saved.name || '';
+            saved.meds.forEach(m => addMedRow(m));
+            generateTable();
+        } else { setLang('sk'); addMedRow(); }
+    };
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log("Service Worker Registered"));
+  }
+</script>
+</body>
+</html>
