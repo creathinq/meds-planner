@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meds-planner-v1';
+const CACHE_NAME = 'meds-planner-v1.0.1';
 const ASSETS = [
   './',
   './index.html',
